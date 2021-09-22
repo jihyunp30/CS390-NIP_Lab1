@@ -22,8 +22,8 @@ NUM_CLASSES = 10
 IMAGE_SIZE = 784
 
 # Use these to set the algorithm to use.
-ALGORITHM = "guesser"
-#ALGORITHM = "custom_net"
+#ALGORITHM = "guesser"
+ALGORITHM = "custom_net"
 #ALGORITHM = "tf_net"
 
 
@@ -41,20 +41,43 @@ class NeuralNetwork_2Layer():
 
     # Activation function.
     def __sigmoid(self, x):
-        pass   #TODO: implement
+        #TODO: implement
+        return (1 / (1 + np.exp(-x)))
 
     # Activation prime function.
     def __sigmoidDerivative(self, x):
-        pass   #TODO: implement
+        #TODO: implement
+        s = 1 / (1 + np.exp(-x))
+        ds = s * (1 - s)
+        return ds
+
 
     # Batch generator for mini-batches. Not randomized.
-    def __batchGenerator(self, l, n):
+    def __batchGenerator(self, l, y, n):
         for i in range(0, len(l), n):
-            yield l[i : i + n]
+            yield l[i : i + n], y[i : i + n]
+
 
     # Training with backpropagation.
     def train(self, xVals, yVals, epochs = 100000, minibatches = True, mbs = 100):
-        pass                                   #TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
+        #TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
+        for j in range(epochs):
+            if minibatches:
+                for xBatch, yBatch in self.__batchGenerator(xVals, yVals, mbs):
+                    l1out, l2out = self.__forward(xBatch)
+                    l2out_max = (l2out.max(axis=1)[:, None])
+                    l2out[l2out < l2out_max] = 0
+
+                    l2_delta = (l2out - yBatch) * (l2out * (1 - l2out))
+                    l1_delta = l2_delta.dot(self.W2.T) * (l1out * (1 - l1out))
+                    self.W2 -= l1out.T.dot(l2_delta)
+                    self.W1 -= xBatch.T.dot(l1_delta)
+            else:
+                l1out, l2out = self.__forward(xVals)
+                l2_delta = (l2out - yVals) * (l2out * (1 - l2out))
+                l1_delta = l2_delta.dot(self.W2.T) * (l1out * (1 - l1out))
+                self.W2 -= l1out.T.dot(l2_delta)
+                self.W1 -= xVals.T.dot(l1_delta)
 
     # Forward pass.
     def __forward(self, input):
@@ -94,7 +117,8 @@ def getRawData():
 
 
 def preprocessData(raw):
-    ((xTrain, yTrain), (xTest, yTest)) = raw            #TODO: Add range reduction here (0-255 ==> 0.0-1.0).
+    ((xTrain, yTrain), (xTest, yTest)) = raw
+    xTrain, xTest = xTrain / 255.0, xTest / 255.0 #TODO: Add range reduction here (0-255 ==> 0.0-1.0).
     yTrainP = to_categorical(yTrain, NUM_CLASSES)
     yTestP = to_categorical(yTest, NUM_CLASSES)
     print("New shape of xTrain dataset: %s." % str(xTrain.shape))
@@ -111,12 +135,21 @@ def trainModel(data):
         return None   # Guesser has no model, as it is just guessing.
     elif ALGORITHM == "custom_net":
         print("Building and training Custom_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to build and train your custon neural net.
-        return None
+        #TODO: Write code to build and train your custon neural net.
+        model = NeuralNetwork_2Layer(IMAGE_SIZE, NUM_CLASSES, 4)
+        xTrain_mod = xTrain.reshape(60000, IMAGE_SIZE)
+        model.train(xTrain_mod, yTrain, 100)
+        return model
     elif ALGORITHM == "tf_net":
         print("Building and training TF_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to build and train your keras neural net.
-        return None
+        #TODO: Write code to build and train your keras neural net.
+        model = tf.keras.Sequential([
+            tf.keras.layers.Flatten(input_shape=(28, 28)),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dense(10, activation='softmax')])
+        model.compile(optimizer='adam', loss=tf.keras.losses.categorical_crossentropy)
+        model.fit(xTrain, yTrain, epochs=20)
+        return model
     else:
         raise ValueError("Algorithm not recognized.")
 
@@ -127,12 +160,15 @@ def runModel(data, model):
         return guesserClassifier(data)
     elif ALGORITHM == "custom_net":
         print("Testing Custom_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to run your custon neural net.
-        return None
+        #TODO: Write code to run your custon neural net.
+        xTest_mod = data.reshape(10000, IMAGE_SIZE)
+        predict = model.predict(xTest_mod)
+        return (predict == predict.max(axis=1)[:, None]).astype(int)
     elif ALGORITHM == "tf_net":
         print("Testing TF_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to run your keras neural net.
-        return None
+        #TODO: Write code to run your keras neural net.
+        predict = model.predict(data)
+        return (predict == predict.max(axis=1)[:, None]).astype(int)
     else:
         raise ValueError("Algorithm not recognized.")
 
