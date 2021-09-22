@@ -53,23 +53,24 @@ class NeuralNetwork_2Layer():
 
 
     # Batch generator for mini-batches. Not randomized.
-    def __batchGenerator(self, l, y, n):
+    def __batchGenerator(self, l, n):
         for i in range(0, len(l), n):
-            yield l[i : i + n], y[i : i + n]
+            yield l[i : i + n]
 
 
     # Training with backpropagation.
-    def train(self, xVals, yVals, epochs = 100000, minibatches = True, mbs = 100):
+    def train(self, xVals, yVals, epochs = 100, minibatches = True, mbs = 100):
         #TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
         for j in range(epochs):
             if minibatches:
-                for xBatch, yBatch in self.__batchGenerator(xVals, yVals, mbs):
+                xGen = self.__batchGenerator(xVals, mbs)
+                yGen = self.__batchGenerator(yVals, mbs)
+                for k in range(600):
+                    xBatch = next(xGen)
+                    yBatch = next(yGen)
                     l1out, l2out = self.__forward(xBatch)
-                    l2out_max = (l2out.max(axis=1)[:, None])
-                    l2out[l2out < l2out_max] = 0
-
-                    l2_delta = (l2out - yBatch) * (l2out * (1 - l2out))
-                    l1_delta = l2_delta.dot(self.W2.T) * (l1out * (1 - l1out))
+                    l2_delta = (l2out - yBatch) * self.__sigmoidDerivative(l1out.dot(self.W2))
+                    l1_delta = l2_delta.dot(self.W2.T) * self.__sigmoidDerivative(xBatch.dot(self.W1))
                     self.W2 -= l1out.T.dot(l2_delta)
                     self.W1 -= xBatch.T.dot(l1_delta)
             else:
@@ -136,9 +137,9 @@ def trainModel(data):
     elif ALGORITHM == "custom_net":
         print("Building and training Custom_NN.")
         #TODO: Write code to build and train your custon neural net.
-        model = NeuralNetwork_2Layer(IMAGE_SIZE, NUM_CLASSES, 4)
+        model = NeuralNetwork_2Layer(IMAGE_SIZE, NUM_CLASSES, 10000)
         xTrain_mod = xTrain.reshape(60000, IMAGE_SIZE)
-        model.train(xTrain_mod, yTrain, 100)
+        model.train(xTrain_mod, yTrain)
         return model
     elif ALGORITHM == "tf_net":
         print("Building and training TF_NN.")
@@ -148,7 +149,7 @@ def trainModel(data):
             tf.keras.layers.Dense(128, activation='relu'),
             tf.keras.layers.Dense(10, activation='softmax')])
         model.compile(optimizer='adam', loss=tf.keras.losses.categorical_crossentropy)
-        model.fit(xTrain, yTrain, epochs=20)
+        model.fit(xTrain, yTrain, epochs=10)
         return model
     else:
         raise ValueError("Algorithm not recognized.")
@@ -163,7 +164,8 @@ def runModel(data, model):
         #TODO: Write code to run your custon neural net.
         xTest_mod = data.reshape(10000, IMAGE_SIZE)
         predict = model.predict(xTest_mod)
-        return (predict == predict.max(axis=1)[:, None]).astype(int)
+        one_hot = (predict == predict.max(axis=1)[:, None]).astype(int)
+        return one_hot
     elif ALGORITHM == "tf_net":
         print("Testing TF_NN.")
         #TODO: Write code to run your keras neural net.
@@ -177,10 +179,24 @@ def runModel(data, model):
 def evalResults(data, preds):   #TODO: Add F1 score confusion matrix here.
     xTest, yTest = data
     acc = 0
+    matrix = np.zeros((10, 10))
     for i in range(preds.shape[0]):
+        p = np.argmax(preds[i])
+        y = np.argmax(yTest[i])
+        matrix[p][y] += 1
         if np.array_equal(preds[i], yTest[i]):   acc = acc + 1
     accuracy = acc / preds.shape[0]
     print("Classifier algorithm: %s" % ALGORITHM)
+
+    for j in range(10):
+        tp = matrix[j][j]
+        fp = np.sum(matrix, axis=1)[j] - tp
+        fn = np.sum(matrix, axis=0)[j] - tp
+        prec = tp / (tp + fp)
+        rec = tp / (tp + fn)
+        f1 = 2 * ((prec * rec) / (prec + rec))
+        print(str(j) + '\tprecision: ' + str(prec) + '\trecall: ' + str(rec) + '\tf1-score: ' + str(f1))
+
     print("Classifier accuracy: %f%%" % (accuracy * 100))
     print()
 
