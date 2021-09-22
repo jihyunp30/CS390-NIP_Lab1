@@ -23,8 +23,8 @@ IMAGE_SIZE = 784
 
 # Use these to set the algorithm to use.
 #ALGORITHM = "guesser"
-#ALGORITHM = "custom_net"
-ALGORITHM = "tf_net"
+ALGORITHM = "custom_net"
+#ALGORITHM = "tf_net"
 
 
 
@@ -59,7 +59,7 @@ class NeuralNetwork_2Layer():
 
 
     # Training with backpropagation.
-    def train(self, xVals, yVals, epochs = 100, minibatches = True, mbs = 100):
+    def train(self, xVals, yVals, epochs = 200, minibatches = True, mbs = 100):
         #TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
         for j in range(epochs):
             if minibatches:
@@ -69,16 +69,17 @@ class NeuralNetwork_2Layer():
                     xBatch = next(xGen)
                     yBatch = next(yGen)
                     l1out, l2out = self.__forward(xBatch)
+
                     l2_delta = (l2out - yBatch) * self.__sigmoidDerivative(l1out.dot(self.W2))
                     l1_delta = l2_delta.dot(self.W2.T) * self.__sigmoidDerivative(xBatch.dot(self.W1))
-                    self.W2 -= l1out.T.dot(l2_delta)
-                    self.W1 -= xBatch.T.dot(l1_delta)
+                    self.W2 -= l1out.T.dot(l2_delta) * self.lr
+                    self.W1 -= xBatch.T.dot(l1_delta) * self.lr
             else:
                 l1out, l2out = self.__forward(xVals)
                 l2_delta = (l2out - yVals) * (l2out * (1 - l2out))
                 l1_delta = l2_delta.dot(self.W2.T) * (l1out * (1 - l1out))
-                self.W2 -= l1out.T.dot(l2_delta)
-                self.W1 -= xVals.T.dot(l1_delta)
+                self.W2 -= l1out.T.dot(l2_delta) * self.lr
+                self.W1 -= xVals.T.dot(l1_delta) * self.lr
 
     # Forward pass.
     def __forward(self, input):
@@ -128,8 +129,6 @@ def preprocessData(raw):
     print("New shape of yTest dataset: %s." % str(yTestP.shape))
     return ((xTrain, yTrainP), (xTest, yTestP))
 
-
-
 def trainModel(data):
     xTrain, yTrain = data
     if ALGORITHM == "guesser":
@@ -137,7 +136,7 @@ def trainModel(data):
     elif ALGORITHM == "custom_net":
         print("Building and training Custom_NN.")
         #TODO: Write code to build and train your custon neural net.
-        model = NeuralNetwork_2Layer(IMAGE_SIZE, NUM_CLASSES, 10000)
+        model = NeuralNetwork_2Layer(IMAGE_SIZE, NUM_CLASSES, 258, 0.05)
         xTrain_mod = xTrain.reshape(60000, IMAGE_SIZE)
         model.train(xTrain_mod, yTrain)
         return model
@@ -146,10 +145,10 @@ def trainModel(data):
         #TODO: Write code to build and train your keras neural net.
         model = tf.keras.Sequential([
             tf.keras.layers.Flatten(input_shape=(28, 28)),
-            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dense(256, activation='relu'),
             tf.keras.layers.Dense(10, activation='softmax')])
         model.compile(optimizer='adam', loss=tf.keras.losses.categorical_crossentropy)
-        model.fit(xTrain, yTrain, epochs=10)
+        model.fit(xTrain, yTrain, epochs=40)
         return model
     else:
         raise ValueError("Algorithm not recognized.")
