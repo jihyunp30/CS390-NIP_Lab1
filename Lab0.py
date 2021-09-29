@@ -1,3 +1,4 @@
+# Jihyun Pyun - CS390NIP
 
 import os
 import numpy as np
@@ -59,7 +60,7 @@ class NeuralNetwork_2Layer():
 
 
     # Training with backpropagation.
-    def train(self, xVals, yVals, epochs = 200, minibatches = True, mbs = 100):
+    def train(self, xVals, yVals, epochs = 1000, minibatches = True, mbs = 100):
         #TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
         for j in range(epochs):
             if minibatches:
@@ -136,7 +137,7 @@ def trainModel(data):
     elif ALGORITHM == "custom_net":
         print("Building and training Custom_NN.")
         #TODO: Write code to build and train your custon neural net.
-        model = NeuralNetwork_2Layer(IMAGE_SIZE, NUM_CLASSES, 258, 0.05)
+        model = NeuralNetwork_2Layer(IMAGE_SIZE, NUM_CLASSES, 128)
         xTrain_mod = xTrain.reshape(60000, IMAGE_SIZE)
         model.train(xTrain_mod, yTrain)
         return model
